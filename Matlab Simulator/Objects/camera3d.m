@@ -33,13 +33,18 @@ classdef camera3d < handle
             %Systems: 0(world) -> 1(x->target) -> 2(roll)
             R2t1=eul2rotm([obj.rollAngle,0,0]);
             
-            %R1t0
-            z0=[0,0,1]';
+            %R1t0 - %upwards leanning. %will keep camera x-y plane parallel
+            %to ground as much as possible in movement
             x1=obj.targetVector;
-            y1=-cross(obj.targetVector,z0);
-            z1=cross(x1,y1);
-            R1t0=[x1,y1,z1];
             
+            z0=[0,0,1]';
+            y1=cross(obj.targetVector,z0); %suze is not 1... cross=a*b*sin(theta)
+            y1=y1/norm(y1);
+            
+            z1=cross(x1,y1);
+            z1=z1/norm(z1); %suze is not 1... cross=a*b*sin(theta)
+            
+            R1t0=[x1,y1,z1];
             R2t0=R1t0*R2t1;
             
             t=obj.position;
@@ -51,7 +56,7 @@ classdef camera3d < handle
             
             %we need to fix rotation for our notation where 0 rotation
             %means that the camera target vector is x, and up vector is z
-            Rfix=eul2rotm([0,-pi/2,0]);
+            Rfix=eul2rotm([0,pi/2,0]);
             R=obj.pose(1:3,1:3);
             t=obj.pose(1:3,4);
             plotpose=rigid3d(R*Rfix,t');
@@ -69,20 +74,28 @@ classdef camera3d < handle
             end
         end
         function image=getframe(obj,varargin)
-            if isvalid(obj.imagePlaneFig) &&...
-                    isa(obj.graphicHandle,'vision.graphics.Figure')
+            if isvalid(obj.imagePlaneFig) &&... %if imagePlane existed, clear it
+                    isa(obj.imagePlaneFig,'matlab.ui.Figure')
                 cla(obj.imagePlaneAxes);
-            end
+            else %else.. create a new window
             obj.imagePlaneFig=figure('color',[1,1,1]); %open new figure
-            obj.imagePlaneAxes=axes('parent',obj.imagePlaneFig); %open new figure
+            obj.imagePlaneAxes=axes('parent',obj.imagePlaneFig,...
+                'view',[0 90],...
+                'XLim',[0,obj.w],...
+                'YLim',[0,obj.h]);
+            axis(obj.imagePlaneAxes,'manual'); %mode - manual, style - image
+            end
             
-            K=obj.computeK;
+            K=obj.computeK; %Method
             for ii=1:length(varargin)   
-                P=varargin{ii};
-                x=K*P';
-                x=(x./x(3,:))';
-                u=x(:,1);
-                v=x(:,2);
+                R=obj.pose(1:3,1:3);
+                t=obj.pose(1:3,4);
+                
+                Prel=R*(varargin{ii}.P-t')'; %[x;y;z] relative to camera in camera axes
+                x=K*Prel;
+                x=(x./x(3,:));
+                u=x(1,:);
+                v=x(2,:);
                 
                 patch(obj.imagePlaneAxes,'XData',u,'YData',v,...
                     'FaceColor',varargin{ii}.graphicHandle.FaceColor,...
@@ -102,78 +115,4 @@ classdef camera3d < handle
             delete(obj.graphicHandle);
         end
     end
-end
-%% Unused Functions
-function [camPts,camAxesPts]=getCamPts()
-cu = 1;
-ln = cu+cu;  % cam length
-
-% back
-camPts = [0  0   cu  cu 0;...
-    0  cu  cu  0  0;...
-    0  0   0   0  0];
-% sides
-camPts = [camPts, ...
-    [0   0  0  0  cu cu cu cu cu cu 0; ...
-    0   cu cu cu cu cu cu 0  0  0  0; ...
-    ln  ln 0  ln ln 0  ln ln 0  ln ln]];
-
-ro = cu/2;    % rim offset
-rm = ln+2*ro; % rim z offset (extent)
-
-% lens
-camPts = [camPts, ...
-    [ -ro  -ro     cu+ro   cu+ro  -ro; ...
-    -ro   cu+ro  cu+ro  -ro     -ro; ...
-    rm   rm     rm      rm      rm] ];
-
-% rim around the lens
-camPts = [camPts, ...
-    [0   0  -ro    0  cu  cu+ro cu cu  cu+ro cu  0 ;...
-    0   cu  cu+ro cu cu  cu+ro cu 0  -ro    0   0 ;...
-    ln  ln  rm    ln ln  rm    ln ln  rm    ln  ln] ];
-
-camPts = bsxfun(@minus, camPts, [cu/2; cu/2; cu]);
-camPts = camPts';
-
-camAxesPts = 2*([0 1 0 0 0 0;
-    0 0 0 1 0 0;
-    0 0 0 0 0 1]);
-end
-function transform=drawCamera(transformMatrix,ParentAxes)
-[camPts,camAxesPts]=getCamPts();
-transform=hgtransform('Matrix',transformMatrix,'Parent',ParentAxes);
-alpha=0.8;
-camColor=[0.7,0,0];
-
-% cam 'lens'
-lensPatch = struct('vertices', camPts, 'faces', 17:21);
-h = patch(lensPatch,'Parent',transform);
-set(h,'FaceColor', [0 0.8 1], 'FaceAlpha', alpha, ...
-    'EdgeColor', camColor, 'HitTest', 'off');
-
-% cam back
-rimPatch = struct('vertices', camPts, 'faces', 1:5);
-h = patch(rimPatch,'Parent',transform);
-set(h,'FaceColor', camColor, 'FaceAlpha', alpha, ...
-    'EdgeColor', camColor, 'HitTest', 'off');
-
-% cam sides
-sidePatch = struct('vertices', camPts, 'faces',...
-    [5 6 7 8 5; 8 9 10 11 8; 11 12 13 14 11; 14 5 6 13 14]);
-h = patch(sidePatch,'Parent',transform);
-set(h,'FaceColor', camColor, 'FaceAlpha', alpha, ...
-    'EdgeColor', camColor, 'HitTest', 'off');
-
-% cam rim
-rimPatch = struct('vertices', camPts, 'faces',...
-    [21 22 23 24  21; 24 25 26  27 24;...
-    27 28 29 30 27; 30 31 32 21 30]);
-
-h = patch(rimPatch,'Parent',transform);
-set(h,'FaceColor', camColor, 'FaceAlpha', alpha, ...
-    'EdgeColor', camColor, 'HitTest', 'off');
-
-plot3(camAxesPts(:,1),camAxesPts(:,2),camAxesPts(:,3),'k-',...
-    'linewidth',1.5, 'HitTest', 'off','Parent',transform);
 end
