@@ -11,7 +11,7 @@ classdef camera3d < handle
         rollAngle(1,1)=0; %rad
         pose(4,4);
         
-        size(1,1)=0.1;
+        cameraSize(1,1)=0.1;
         worldAxes(1,1)=gobjects(1,1);
         imagePlaneFig(1,1)=gobjects(1,1);
         imagePlaneAxes(1,1)=gobjects(1,1);
@@ -23,7 +23,7 @@ classdef camera3d < handle
                 worldAxes=gca;
             end
             
-            obj.worldAxes=worldAxes;
+            obj.worldAxes=worldAxes; 
             obj.position=position;
             obj.targetVector=targetVector;
             
@@ -33,16 +33,18 @@ classdef camera3d < handle
             %Systems: 0(world) -> 1(x->target) -> 2(roll)
             R2t1=eul2rotm([obj.rollAngle,0,0]);
             
-            %R1t0 - %upwards leanning. %will keep camera x-y plane parallel
-            %to ground as much as possible in movement
-            x1=obj.targetVector;
+            %R1t0 - 
+            %z1 is the target vector
+            %upwards leanning. %will keep camera x-z plane parallel
+            %to ground as much as possible in movement.
+            
+            z1=obj.targetVector;
             
             z0=[0,0,1]';
-            y1=cross(obj.targetVector,z0); %suze is not 1... cross=a*b*sin(theta)
+            x1=cross(z0,obj.targetVector); %size is not 1... cross=a*b*sin(theta)
+            x1=x1/norm(x1);
+            y1=cross(z1,x1);
             y1=y1/norm(y1);
-            
-            z1=cross(x1,y1);
-            z1=z1/norm(z1); %suze is not 1... cross=a*b*sin(theta)
             
             R1t0=[x1,y1,z1];
             R2t0=R1t0*R2t1;
@@ -53,13 +55,7 @@ classdef camera3d < handle
         end
         function plot(obj)
             computePose(obj); %recompute pose in case that user changed properties
-            
-            %we need to fix rotation for our notation where 0 rotation
-            %means that the camera target vector is x, and up vector is z
-            Rfix=eul2rotm([0,pi/2,0]);
-            R=obj.pose(1:3,1:3);
-            t=obj.pose(1:3,4);
-            plotpose=rigid3d(R*Rfix,t');
+            plotpose=rigid3d(obj.pose');
             
             if isvalid(obj.graphicHandle) &&...
                     isa(obj.graphicHandle,'vision.graphics.Camera') %only update
@@ -69,7 +65,7 @@ classdef camera3d < handle
                 obj.graphicHandle=plotCamera(...
                     'Parent',obj.worldAxes,...
                     'AbsolutePose',plotpose,...
-                    'size',obj.size);
+                    'size',obj.cameraSize);
                 hold(obj.worldAxes,'off');
             end
         end
@@ -87,15 +83,21 @@ classdef camera3d < handle
             end
             
             K=obj.computeK; %Method
-            for ii=1:length(varargin)   
-                R=obj.pose(1:3,1:3);
-                t=obj.pose(1:3,4);
-                
-                Prel=R*(varargin{ii}.P-t')'; %[x;y;z] relative to camera in camera axes
-                x=K*Prel;
-                x=(x./x(3,:));
+            Rwtc=obj.pose(1:3,1:3)';
+            O=obj.pose(1:3,4);
+            for ii=1:length(varargin)          
+                P=varargin{ii}.P;
+                m=size(P,1); %number of points
+                X=[P'; %transpose here so X is [x;y;z;1]
+                    ones(1,m)];
+                x=K*[Rwtc,-Rwtc*O]*X;
+                x=(x./(x(3,:)+eps));
                 u=x(1,:);
                 v=x(2,:);
+                
+%                 ind=convhull(u,v);
+%                 u=u(ind);
+%                 v=v(ind);
                 
                 patch(obj.imagePlaneAxes,'XData',u,'YData',v,...
                     'FaceColor',varargin{ii}.graphicHandle.FaceColor,...

@@ -17,7 +17,7 @@ q=linspace(0,1,100);
 p=EvalBezCrv_DeCasteljau(Q,q);
 
 hold(worldAxes,'on');
-h_track=plot3(p(:,1),p(:,2),p(:,3));
+h_track=plot3(worldAxes,p(:,1),p(:,2),p(:,3));
 hold(worldAxes,'off');
 
 target=[1,0.5,0.5]';
@@ -27,7 +27,7 @@ for ii=1:length(p)
     camera.targetVector=D/vecnorm(D,2);
     camera.plot;
     drawnow;
-    pause(0.1);
+    pause(0.01);
     
     camera.getframe(plane2,plane1);
 end
