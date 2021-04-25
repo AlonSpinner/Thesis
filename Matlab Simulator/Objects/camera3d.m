@@ -95,7 +95,6 @@ classdef camera3d < handle
             
             cla(obj.imagePlaneAxes);
             hold(obj.imagePlaneAxes,'on');
-            computeProjMat(obj);
             for ii=1:length(varargin)
                 [u,v]=ProjectOnImage(obj,varargin{ii});
                 switch class(varargin{ii})
@@ -126,6 +125,11 @@ classdef camera3d < handle
             v=x(2,:);
             v=obj.h-v; %flip vertifcal axis of camera for image
         end
+        function computeProjMat(obj)
+            Rwtc=obj.pose(1:3,1:3)';
+            O=obj.pose(1:3,4);
+            obj.ProjMat=obj.K*[Rwtc,-Rwtc*O];
+        end
         function delete(obj) %destructor
             delete(obj.graphicHandle);
         end
@@ -136,9 +140,4 @@ function computeK(obj)
 obj.K=[obj.fx,0,obj.px;
     0,obj.fy,obj.py;
     0,0,1];
-end
-function computeProjMat(obj)
-Rwtc=obj.pose(1:3,1:3)';
-O=obj.pose(1:3,4);
-obj.ProjMat=obj.K*[Rwtc,-Rwtc*O];
 end

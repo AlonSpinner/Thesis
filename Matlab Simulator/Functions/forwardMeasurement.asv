@@ -1,4 +1,4 @@
-function features=forwardMeasurement(camera,pair)
+function [rho,theta,s,d,p0]=forwardMeasurement(camera,pair)
 %rho- VL distance from image center
 %theta- VL slope
 %s- VP location on VL
@@ -12,11 +12,15 @@ P=[u',v'];
 d=sqrt(sum((P(1,:)-P(2,:)).^2));
 p0=mean(P);
 
-VL=camera.K'\pair.plane.n; %VL ~ [a,b,c] of line
+VL=inv(camera.K')*pair.plane.n; %VL ~ [a,b,c] of line
 rho=abs(VL(3))/sqrt((VL(1)^2+VL(2)^2+eps)); %proof in wiki https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
-theta=-VL(1)/(VL(2)+eps); %ax+by+c=0 ->y=-(a/b)*x-(c/b).
+theta=atan(-VL(1)/(VL(2)+eps)); %ax+by+c=0 ->y=-(a/b)*x-(c/b).
     
-s=0;    
+    
+end
 
-features=[rho,theta,s,d,p0];
+[u,v]=ProjectOnImage(obj,geo3d)
+
+a=1;
+
 end

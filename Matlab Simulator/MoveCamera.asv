@@ -21,8 +21,7 @@ h_track=plot3(worldAxes,p(:,1),p(:,2),p(:,3));
 hold(worldAxes,'off');
 
 target=[1,0.5,0.5]';
-Nfeatures=6;
-features=zeros(Nfeatures,length(p),length(pairs));
+features=zeros(5,length(p),length(pairs));
 for ii=1:length(p)
     camera.position=p(ii,:);
     camera.computeProjMat(); %should happen auto from camera.position
@@ -37,9 +36,9 @@ for ii=1:length(p)
         pairs{2}.plane,...
         pairs{2}.line);
     
-    for kk=1:length(pairs)
-        features(:,ii,kk)=forwardMeasurement(camera,pairs{kk});
-    end
+    [rho,theta,s,d,p0]=forwardMeasurement(camera,pairs{1});
+    [rho,theta,s,d,p0]=forwardMeasurement(camera,pairs{2});
+    features()
 end
 
 delete(h_track);
