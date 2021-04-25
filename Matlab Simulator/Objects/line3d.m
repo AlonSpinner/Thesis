@@ -1,7 +1,6 @@
 classdef line3d < handle
     properties
-        P0(3,1);
-        P1(3,1);
+        P(2,3);
         direction(3,1);
         length(1,1);
         
@@ -9,18 +8,16 @@ classdef line3d < handle
         graphicHandle(1,1)=gobjects(1,1);
     end
     methods
-        function obj=line3d(P0,P1,worldAxes) %constructor
+        function obj=line3d(P,worldAxes) %constructor
             if nargin<3 %worldAxes not provided
                 worldAxes=gca;
             end
-            
-            P0=P0(:); P1=P1(:);
+            P0=P(1,:); P1=P(2,:);
             D=P1-P0;
             L=vecnorm(D,2);
             t=D/L;
             
-            obj.P0=P0;
-            obj.P1=P1;
+            obj.P=P;
             obj.direction=t;
             obj.length=L;
             obj.worldAxes=worldAxes;
@@ -29,8 +26,7 @@ classdef line3d < handle
             delete(obj.graphicHandle);
         end
         function plot(obj,varargin)
-            P=[obj.P0,obj.P1];
-            x=P(1,:); y=P(2,:); z=P(3,:);
+            x=obj.P(:,1); y=obj.P(:,2); z=obj.P(:,3);
             if isvalid(obj.graphicHandle) &&...
                     isa(obj.graphicHandle,'matlab.graphics.Line') %only update
                 set(obj.graphicHandle,...

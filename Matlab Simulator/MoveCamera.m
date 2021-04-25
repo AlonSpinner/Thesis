@@ -1,5 +1,5 @@
 %%
-CreateScene;
+[camera,pairs,box,worldfig,worldAxes]=CreateScene();
 %% Roll camera
 roll=linspace(0,2*pi,10);
 for ii=1:length(roll)
@@ -9,9 +9,9 @@ for ii=1:length(roll)
     pause(0.1);
 end
 %% Take Camera for a stroll
-Q=[0,0.5,0.5
-    1,0,1;
-    1,1,1;
+Q=[-1,0,0]+[0,0.5,0.5
+    0.6,0,0.6;
+    0.6,0.6,0.6;
     0,0.5,0.5];
 q=linspace(0,1,100);
 p=EvalBezCrv_DeCasteljau(Q,q);
@@ -29,7 +29,12 @@ for ii=1:length(p)
     drawnow;
     pause(0.01);
     
-    camera.getframe(plane2,plane1);
+    img=camera.getframe(pairs{1}.plane,...
+        pairs{1}.line,...
+        pairs{2}.plane,...
+        pairs{2}.line);
+    
+%     ForwardMeasurement(plane,line,camera)
 end
 
 delete(h_track);
