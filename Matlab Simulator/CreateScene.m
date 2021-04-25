@@ -22,13 +22,13 @@ camera.plot;
 
 %-----------------Pair1
 %plane1
-P=[1  0.5  0.5
-   1  0  0
+P=[1.5  0.5  1
+   1.5  1  0
    0.5 0 0.5];
 plane1=plane3d(P,worldAxes);
 %line1
-P=[1,0.5,0.5;
-    1,0,0];
+P=[1.5,0.5,1;
+    0.5,0,0.5];
 line1=line3d(P,worldAxes);
 %pairing
 pairs{1}.plane=plane1;
@@ -36,13 +36,14 @@ pairs{1}.line=line1;
 
 %-----------------Pair2
 %plane2
-P=[1  1  0
-   1  0  1
-   1  1  1];
+P=[0.5  0  0
+   1.5  0  0
+   1.5  1  0
+   0.5 1 0];
 plane2=plane3d(P,worldAxes);
 %line2
-P=[1,1,0
-    1,0,1];
+P=[1.5,1,0
+    0.5,1,0];
 line2=line3d(P,worldAxes);
 %pairing
 pairs{2}.plane=plane2;
