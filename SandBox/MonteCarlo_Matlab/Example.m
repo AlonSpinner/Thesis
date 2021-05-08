@@ -1,7 +1,7 @@
 %% Define
 M=20; %Number of Particles
 max_moves = 40;
-u_t = 5; %control input (constant motion in x-direction)
+u_t = 3; %control input (constant motion in x-direction)
 x_t=1; %ground truth for first move
 
 %build map
@@ -41,24 +41,24 @@ for mv = 1:max_moves
     cla(ax);
     h_Chi_tm1=stem(ax,ChiBar_t(:,1),ChiBar_t(:,2));
     h_Chi_t=stem(ax,Chi_t(:,1),Chi_t(:,2));
-    h_gt=plot(x_t*[1,1],ax.YLim,'linewidth',4,'color',[0.7,0.5,0.7]);
     h_pdf_door=plot(x_door_map,pdf_door,'linestyle','--','color',[0,0,0]);
+    h_gt=plot(x_t*[1,1],ax.YLim,'linewidth',4,'color',[0.7,0.5,0.7]);
     
     for ii=1:length(doors)
         drawDoor(ax,doorWidth,doors(ii));
     end
     
     legend([h_Chi_tm1,h_Chi_t,h_gt,h_pdf_door],...
-        {'Previous','Current','ground truth','pdf door'});
+        {'Distribution Weights','After Resampling','ground truth','pdf door'});
     titleText=sprintf(['Move Number %g with x = %g\n',...
         'measurement = %g\n',...
         'mean of particles = %g'],mv,x_t,z_t,mean(Chi_t(:,1)));
     title(titleText);
     
-    pause(0.4);
+    pause(0.0);
 end
 %% Functions
-function [Chi_t,ChiBar_t] =  MCL(Chi_tm1,u_t,z_t,std_process,afcn_p_door,map)
+function [Chi_t,ChiBar_t]=MCL(Chi_tm1,u_t,z_t,std_process,afcn_p_door,map)
 %Implements Monte Carlo Localization (MCL) algorithm, Table 8.2, page 252,
 %"Probabilistic Robotics"
 
@@ -79,8 +79,8 @@ end
 cumwt = cumsum(ChiBar_t(:,2))/N; %normalize the new distribution to be a PDF
 for m = 1:M %Resampling step
     %draw m-th sample with probability proportional to wt with two methods:
-    swt = cumwt(end)/M*(m-1/2); %2.) swt steps through CMF, and selects
-    index = find(cumwt>= swt,1,'first');
+    U=m/M;
+    index = find(cumwt>=U,1,'first');
     x_t = ChiBar_t(index,1);
     Chi_t(m,:) = [x_t,1/M]; %add particle to CHI
 end
@@ -101,6 +101,7 @@ end
 function z_t=take_measurement(x_t,map,std_measure)
 x_4meas=x_t+randn(1)*std_measure; %assume sensor can light up around door
 x_4meas=roll_around(x_4meas,map);
+x_4meas=max(x_4meas,1); %protection for values that can be indexed
 if map(floor(x_4meas)) || map(ceil(x_4meas))
     z_t=1;
 else
@@ -124,5 +125,7 @@ function drawDoor(ax,doorWidth,doorCenter)
     patch(ax,x,y,[0.4,0.7,0.6]);
     end
 function x_t=roll_around(x_t,map)
-x_t=mod(x_t,length(map)-1)+1;
+if x_t>length(map)
+    x_t=x_t-length(map);
+end
 end
