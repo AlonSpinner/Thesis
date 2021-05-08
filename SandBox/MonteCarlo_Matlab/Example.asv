@@ -17,7 +17,7 @@ std_measure=2;
 std_process=1;
 
 %define measurement function
-NPoints=100; %points to interpolate pdf between
+NPoints=100; %points to interpolate
 x_door_map=linspace(0,MapLength,NPoints);
 afcn_pdf_door=build_afcn_pdf_door(x_door_map,doors,std_measure);
 pdf_door=afcn_pdf_door(x_door_map);
