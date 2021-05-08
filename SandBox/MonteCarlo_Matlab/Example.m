@@ -1,31 +1,25 @@
 %% Define
+M=20; %Number of Particles
+max_moves = 40;
+u_t = 5; %control input (constant motion in x-direction)
+x_t=1; %ground truth for first move
 
-%map - 0:100 grid with 3 doors
+%build map
+MapLength=100;
+map=zeros(1,MapLength);
 doorWidth=2;
 doors=[10,20,80];
-map=zeros(1,100);
 for ii=1:length(doors)
     map(doors(ii)-doorWidth/2:doors(ii)+doorWidth/2)=1;
 end
 
 std_measure=2;
-std_init=4;
 std_process=1;
 
 %define measurement function
-afcn_gauss=@(x,mu,sig) 1/(2*pi*sig^2)^(1/2)*exp(-1/2*(x-mu).^2/sig^2);
 x_door_map=linspace(0,100,100);
-p_door_map=...
-afcn_gauss(x_door_map,doors(1),std_measure)+...
-afcn_gauss(x_door_map,doors(2),std_measure)+...
-afcn_gauss(x_door_map,doors(3),std_measure);
-p_door_map=p_door_map/length(doors); %divide so integral over prob fcn is 1
-afcn_p_door=@(x) interp1(x_door_map,p_door_map,x);
+afcn_pdf_door=build_afcn_pdf_door(x_door_map,doors,std_measure);
 %% Loop
-M=20; %Number of Particles
-max_moves = 40;
-u_t = 5; %control input (constant motion in x-direction)
-x_t=1; %ground truth for first move
 Chi_t=[linspace(0,length(map),M)', ones(M,1)/M];  %array of particles and associated weights
 
 fig=figure;
@@ -39,7 +33,7 @@ for mv = 1:max_moves
     %take measurement
     z_t=take_measurement(x_t,map,std_measure);
     % apply particle filter
-    [Chi_t,ChiBar_t] = MCL(Chi_tm1,u_t,z_t,std_process,afcn_p_door,map);
+    [Chi_t,ChiBar_t] = MCL(Chi_tm1,u_t,z_t,std_process,afcn_pdf_door,map);
     
     cla(ax);
     h_Chi_tm1=stem(ax,ChiBar_t(:,1),ChiBar_t(:,2));
@@ -77,7 +71,8 @@ end
 cumwt = cumsum(ChiBar_t(:,2))/N; %normalize the new distribution to be a PDF
 for m = 1:M %Resampling step
     %draw m-th sample with probability proportional to wt with two methods:
-    index = find(cumwt>= rand,1,'first');
+    swt = cumwt(end)/M*(m-1/2); %2.) swt steps through CMF, and selects
+    index = find(cumwt>= swt,1,'first');
     x_t = ChiBar_t(index,1);
     Chi_t(m,:) = [x_t,1/M]; %add particle to CHI
 end
@@ -89,20 +84,27 @@ x_t=roll_around(x_t,map);
 end
 function w_t = measurement_model(z_t, x_t, afn_p_door)
 % evaluate likelihood of measurement z_t given prior with mean x_t
-if z_t==1 
-    w_t=afn_p_door(x_t);
-else
-    w_t=1e-10;
-end
+w_t=afn_p_door(x_t);
 end
 function z_t=take_measurement(x_t,map,std_measure)
-x_4meas=x_t+randn(1)*std_measure;
+x_4meas=x_t+randn(1)*std_measure; %assume sensor can light up around door
 x_4meas=roll_around(x_4meas,map);
 if map(floor(x_4meas)) || map(ceil(x_4meas))
     z_t=1;
 else
     z_t=0;
 end
+end
+function afcn_pdf_door=build_afcn_pdf_door(x_door_map,doors,std_measure)
+min_pdf_door=1e-10;
+afcn_gauss=@(x,mu,sig) 1/(2*pi*sig^2)^(1/2)*exp(-1/2*(x-mu).^2/sig^2);
+pdf_door=...
+afcn_gauss(x_door_map,doors(1),std_measure)+...
+afcn_gauss(x_door_map,doors(2),std_measure)+...
+afcn_gauss(x_door_map,doors(3),std_measure);
+pdf_door=max(pdf_door,min_pdf_door);
+pdf_door=pdf_door/trapz(pdf_door); %normalize to pdf
+afcn_pdf_door=@(x) interp1(x_door_map,pdf_door,x);
 end
 function drawDoor(ax,doorWidth,doorCenter)
     x=([0 1 1 0]-0.5)*doorWidth+doorCenter;
