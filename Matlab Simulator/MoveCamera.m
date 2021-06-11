@@ -30,8 +30,9 @@ for ii=1:length(p)
     camera.targetVector=D/vecnorm(D,2);
     camera.plot;
     drawnow;
-    pause(0.01);
+    pause(0.1);
     
+<<<<<<< HEAD
     img=camera.getframe(pairs{1}.plane,...
         pairs{1}.line,...
         pairs{2}.plane,...
@@ -40,6 +41,9 @@ for ii=1:length(p)
     for kk=1:length(pairs)
         features(:,ii,kk)=forwardMeasurement(camera,pairs{kk});
     end
+=======
+    camera.getframe(plane2);
+>>>>>>> main
 end
 
 delete(h_track);
