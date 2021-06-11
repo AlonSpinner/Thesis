@@ -27,9 +27,9 @@ for ii=1:length(p)
     camera.targetVector=D/vecnorm(D,2);
     camera.plot;
     drawnow;
-    pause(0.01);
+    pause(0.1);
     
-    camera.getframe(plane2,plane1);
+    camera.getframe(plane2);
 end
 
 delete(h_track);
